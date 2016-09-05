@@ -19,7 +19,28 @@ const (
 	Favorite = "favorite"
 	Delete   = "delete"
 	DM       = "dm"
+	Help     = "help"
 )
+
+const HelpMessage = `
+/twitter sub-command [args]
+	tweet [text] 
+		ツイートする
+	follow [userName]
+		フォローする
+	unfollow [userName]
+		アンフォローする
+	retweet [url]
+		リツイートする
+	favorite [url]
+		ｲｲﾈ・する
+	delete [url]
+		ツイートを削除する
+	dm [userName] [text]
+		DMを送る
+	help
+		ヘルプを表示する
+`
 
 // SlackBird is object for handling commands.
 type SlackBird struct {
@@ -43,7 +64,7 @@ func (sb *SlackBird) Do(text, channel string, errCh chan error) (err error) {
 	t := strings.SplitN(strings.TrimSpace(text), " ", 2)
 	if len(t) < 1 {
 		err = errors.New("Sub command doesn't exist")
-		sb.sendErrorMessage(err.Error(), channel)
+		sb.sendMessage(err.Error(), channel)
 		if errCh != nil {
 			errCh <- err
 		}
@@ -64,11 +85,13 @@ func (sb *SlackBird) Do(text, channel string, errCh chan error) (err error) {
 		err = sb.del(t)
 	case DM:
 		err = sb.dm(t)
+	case Help:
+		err = sb.help(channel)
 	default:
 		err = fmt.Errorf("Unknown command %s", t[0])
 	}
 	if err != nil {
-		sb.sendErrorMessage(err.Error(), channel)
+		sb.sendMessage(err.Error(), channel)
 	}
 	if errCh != nil {
 		errCh <- err
@@ -76,12 +99,17 @@ func (sb *SlackBird) Do(text, channel string, errCh chan error) (err error) {
 	return
 }
 
-func (sb *SlackBird) sendErrorMessage(text, channel string) {
+func (sb *SlackBird) sendMessage(text, channel string) {
 	msg := &inco.Message{
 		Text:    text,
 		Channel: channel,
 	}
 	inco.Incoming(sb.webhookURL, msg)
+}
+
+func (sb *SlackBird) help(channel string) error {
+	sb.sendMessage(HelpMessage, channel)
+	return nil
 }
 
 func (sb *SlackBird) tweet(t []string) error {
